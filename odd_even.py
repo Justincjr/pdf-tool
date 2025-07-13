@@ -1,32 +1,70 @@
+import tkinter as tk
+from tkinter import filedialog, messagebox
 from PyPDF2 import PdfReader, PdfWriter
+import os
 
-# Paths to your files
-even_pdf_path = 'Answer even.pdf'  # pages 4 to 56
-odd_pdf_path = 'Answer odd.pdf'  # pages 57 to 5 in reverse
+def merge_pdfs(even_path, odd_path, output_path):
+    try:
+        even_reader = PdfReader(even_path)
+        odd_reader = PdfReader(odd_path)
 
-# Load the PDFs
-even_reader = PdfReader(even_pdf_path)
-odd_reader = PdfReader(odd_pdf_path)
+        writer = PdfWriter()
+        num_pages = len(even_reader.pages)
 
-# Output writer
-writer = PdfWriter()
+        for i in range(num_pages):
+            even_page = even_reader.pages[num_pages - 1 - i]  # reversed
+            odd_page = odd_reader.pages[i]
+            writer.add_page(odd_page)
+            writer.add_page(even_page)
 
-# Both should have the same number of pages (26 if pages are from 4-56 and 5-57)
-num_pages = len(even_reader.pages)
+        with open(output_path, 'wb') as f_out:
+            writer.write(f_out)
 
-for i in range(num_pages):
-    # print(i)
-    # Get odd page from the reverse list
-    even_page = even_reader.pages[num_pages - 1 - i]  # reversed
-    # odd_page = odd_reader.pages[i]
-    odd_page = odd_reader.pages[i]
+        return True
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
+        return False
 
-    writer.add_page(odd_page)
-    writer.add_page(even_page)
-  
+def select_even_file():
+    path = filedialog.askopenfilename(filetypes=[("PDF Files", "*.pdf")])
+    if path:
+        even_entry.delete(0, tk.END)
+        even_entry.insert(0, path)
 
-# Save the merged PDF
-with open('Answer.pdf', 'wb') as f_out:
-    writer.write(f_out)
+def select_odd_file():
+    path = filedialog.askopenfilename(filetypes=[("PDF Files", "*.pdf")])
+    if path:
+        odd_entry.delete(0, tk.END)
+        odd_entry.insert(0, path)
 
-print("Merging complete. Output saved to 'merged_output.pdf'")
+def merge_files():
+    even_path = even_entry.get()
+    odd_path = odd_entry.get()
+    output_path = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF Files", "*.pdf")])
+    
+    if not even_path or not odd_path or not output_path:
+        messagebox.showwarning("Input Missing", "Please select both input files and specify an output filename.")
+        return
+
+    success = merge_pdfs(even_path, odd_path, output_path)
+    if success:
+        messagebox.showinfo("Success", f"Merged PDF saved to:\n{output_path}")
+
+# --- GUI Setup ---
+root = tk.Tk()
+root.title("PDF Odd-Even Merger")
+root.geometry("500x250")
+
+tk.Label(root, text="Even PDF (reversed):").pack(pady=(10, 0))
+even_entry = tk.Entry(root, width=50)
+even_entry.pack()
+tk.Button(root, text="Browse", command=select_even_file).pack()
+
+tk.Label(root, text="Odd PDF:").pack(pady=(10, 0))
+odd_entry = tk.Entry(root, width=50)
+odd_entry.pack()
+tk.Button(root, text="Browse", command=select_odd_file).pack()
+
+tk.Button(root, text="Merge PDFs", command=merge_files, bg="#4CAF50", fg="white", height=2).pack(pady=20)
+
+root.mainloop()
