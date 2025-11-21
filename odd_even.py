@@ -26,6 +26,23 @@ def merge_pdfs(even_path, odd_path, output_path):
         messagebox.showerror("Error", str(e))
         return False
 
+def merge_multiple_pdfs(pdf_paths, output_path):
+    try:
+        writer = PdfWriter()
+        
+        for pdf_path in pdf_paths:
+            reader = PdfReader(pdf_path)
+            for page in reader.pages:
+                writer.add_page(page)
+        
+        with open(output_path, 'wb') as f_out:
+            writer.write(f_out)
+        
+        return True
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
+        return False
+
 def split_pdf(input_path, start_page, end_page, output_path):
     try:
         reader = PdfReader(input_path)
@@ -133,6 +150,82 @@ def open_insert_page_window():
     tk.Button(root, text="Insert Page", command=do_insert, bg="#FF9800", fg="white", height=2).pack(pady=20)
     tk.Button(root, text="Back to Menu", command=main_menu).pack()
 
+def open_merge_multiple_window():
+    clear_window()
+
+    tk.Label(root, text="Select PDFs to merge (in order):", font=("Arial", 12)).pack(pady=(10, 0))
+    
+    # Frame to hold the listbox and scrollbar
+    list_frame = tk.Frame(root)
+    list_frame.pack(pady=10)
+    
+    scrollbar = tk.Scrollbar(list_frame)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    
+    pdf_listbox = tk.Listbox(list_frame, width=60, height=10, yscrollcommand=scrollbar.set)
+    pdf_listbox.pack(side=tk.LEFT)
+    scrollbar.config(command=pdf_listbox.yview)
+    
+    pdf_paths = []
+    
+    def add_pdfs():
+        files = filedialog.askopenfilenames(filetypes=[("PDF Files", "*.pdf")])
+        for file in files:
+            if file not in pdf_paths:
+                pdf_paths.append(file)
+                pdf_listbox.insert(tk.END, file)
+    
+    def remove_selected():
+        selection = pdf_listbox.curselection()
+        if selection:
+            index = selection[0]
+            pdf_listbox.delete(index)
+            pdf_paths.pop(index)
+    
+    def move_up():
+        selection = pdf_listbox.curselection()
+        if selection and selection[0] > 0:
+            index = selection[0]
+            pdf_paths[index], pdf_paths[index - 1] = pdf_paths[index - 1], pdf_paths[index]
+            item = pdf_listbox.get(index)
+            pdf_listbox.delete(index)
+            pdf_listbox.insert(index - 1, item)
+            pdf_listbox.selection_set(index - 1)
+    
+    def move_down():
+        selection = pdf_listbox.curselection()
+        if selection and selection[0] < len(pdf_paths) - 1:
+            index = selection[0]
+            pdf_paths[index], pdf_paths[index + 1] = pdf_paths[index + 1], pdf_paths[index]
+            item = pdf_listbox.get(index)
+            pdf_listbox.delete(index)
+            pdf_listbox.insert(index + 1, item)
+            pdf_listbox.selection_set(index + 1)
+    
+    button_frame = tk.Frame(root)
+    button_frame.pack()
+    
+    tk.Button(button_frame, text="Add PDFs", command=add_pdfs, width=15).pack(side=tk.LEFT, padx=5)
+    tk.Button(button_frame, text="Remove Selected", command=remove_selected, width=15).pack(side=tk.LEFT, padx=5)
+    tk.Button(button_frame, text="Move Up", command=move_up, width=10).pack(side=tk.LEFT, padx=5)
+    tk.Button(button_frame, text="Move Down", command=move_down, width=10).pack(side=tk.LEFT, padx=5)
+    
+    def do_merge():
+        if len(pdf_paths) < 2:
+            messagebox.showwarning("Not Enough Files", "Please select at least 2 PDF files to merge.")
+            return
+        
+        output_path = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF Files", "*.pdf")])
+        
+        if not output_path:
+            return
+        
+        if merge_multiple_pdfs(pdf_paths, output_path):
+            messagebox.showinfo("Success", f"Merged {len(pdf_paths)} PDFs successfully!\nSaved to:\n{output_path}")
+    
+    tk.Button(root, text="Merge All PDFs", command=do_merge, bg="#4CAF50", fg="white", height=2, width=20).pack(pady=20)
+    tk.Button(root, text="Back to Menu", command=main_menu).pack()
+
 def open_merge_window():
     clear_window()
 
@@ -202,6 +295,7 @@ def main_menu():
     clear_window()
 
     tk.Label(root, text="PDF Tool", font=("Arial", 18)).pack(pady=20)
+    tk.Button(root, text="Merge Multiple PDFs", command=open_merge_multiple_window, height=2, width=45).pack(pady=10)
     tk.Button(root, text="Merge Odd-Even PDFs for Single Sided Scanning", command=open_merge_window, height=2, width=45).pack(pady=10)
     tk.Button(root, text="Split PDF (Page Range)", command=open_split_window, height=2, width=45).pack(pady=10)
     tk.Button(root, text="Insert Page from another PDF", command=open_insert_page_window, height=2, width=45).pack(pady=10)
@@ -219,7 +313,7 @@ def select_file(entry_widget):
 # --- Main Window Setup ---
 root = tk.Tk()
 root.title("PDF Tool")
-root.geometry("500x400")
+root.geometry("550x450")
 
 main_menu()
 root.mainloop()
