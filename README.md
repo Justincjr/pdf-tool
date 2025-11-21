@@ -1,10 +1,13 @@
 # 🧰 PDF Tool — Merge, Split, and Insert Pages
 
-A user-friendly desktop tool (built with Python and Tkinter) to manipulate PDF files. Easily **merge odd-even scanned PDFs**, **split pages by range**, or **insert a specific page from one PDF into another** — all in a few clicks.
+A user-friendly desktop tool (built with Python and Tkinter) to manipulate PDF files. Easily **merge multiple PDFs**, **merge odd-even scanned PDFs**, **split pages by range**, or **insert a specific page from one PDF into another** — all in a few clicks.
 
 ---
 
 ## ✨ Features
+
+- 📚 **Merge Multiple PDFs**  
+  Combine any number of PDF files into a single document. Select files, reorder them as needed, and merge them all at once.
 
 - 🔀 **Merge Odd and Even PDFs**  
   Combine separately scanned even and odd pages into a single correctly ordered PDF.
@@ -19,8 +22,9 @@ A user-friendly desktop tool (built with Python and Tkinter) to manipulate PDF f
 
 ## 🖼️ Interface Overview
 
-- A simple menu lets you choose between **Merge**, **Split**, or **Insert**.
+- A simple menu lets you choose between **Merge Multiple PDFs**, **Merge Odd-Even**, **Split**, or **Insert**.
 - Each mode guides you through selecting files and inputting necessary options.
+- The **Merge Multiple PDFs** window allows you to add files, remove them, and reorder them before merging.
 - Errors and results are clearly shown using dialogs.
 
 ---
