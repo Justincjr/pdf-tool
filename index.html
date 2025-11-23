@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Tool</title>
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .menu-btn {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            background: #667eea;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .menu-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .page-content {
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        label {
+            display: block;
+            margin: 15px 0 5px;
+            color: #555;
+            font-weight: bold;
+        }
+
+        input[type="file"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        input[type="file"]:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .file-list {
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+            background: #f9f9f9;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+
+        .file-item-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-right: 10px;
+        }
+
+        .file-item-controls {
+            display: flex;
+            gap: 5px;
+        }
+
+        .small-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .btn-up, .btn-down {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-remove {
+            background: #f44336;
+            color: white;
+        }
+
+        .small-btn:hover {
+            opacity: 0.8;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 15px;
+            margin: 20px 0 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #45a049;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-split {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-split:hover {
+            background: #0b7dda;
+        }
+
+        .btn-insert {
+            background: #FF9800;
+            color: white;
+        }
+
+        .btn-insert:hover {
+            background: #e68900;
+        }
+
+        .info {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 14px;
+            color: #1565c0;
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-group > div {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="mainMenu">
+            <h1>🧰 PDF Tool</h1>
+            <button class="menu-btn" onclick="showPage('mergeMult')">📚 Merge Multiple PDFs</button>
+            <button class="menu-btn" onclick="showPage('mergeOddEven')">🔀 Merge Odd-Even PDFs</button>
+            <button class="menu-btn" onclick="showPage('split')">✂️ Split PDF</button>
+            <button class="menu-btn" onclick="showPage('insert')">📥 Insert Page</button>
+        </div>
+
+        <!-- Merge Multiple PDFs -->
+        <div id="mergeMult" class="page-content hidden">
+            <h1>📚 Merge Multiple PDFs</h1>
+            <label>Select PDFs to merge (in order):</label>
+            <input type="file" id="multiFiles" accept=".pdf" multiple>
+            <div id="multiFileList" class="file-list"></div>
+            <button class="action-btn btn-primary" onclick="mergeMultiplePDFs()">Merge All PDFs</button>
+            <button class="action-btn btn-secondary" onclick="showPage('menu')">Back to Menu</button>
+            <div id="multiLoading" class="loading hidden">Processing...</div>
+        </div>
+
+        <!-- Merge Odd-Even PDFs -->
+        <div id="mergeOddEven" class="page-content hidden">
+            <h1>🔀 Merge Odd-Even PDFs</h1>
+            <div class="info">
+                For single-sided scanning: scan odd pages first, then flip the stack and scan even pages. The even pages will be reversed automatically.
+            </div>
+            <label>Even PDF (will be reversed):</label>
+            <input type="file" id="evenFile" accept=".pdf">
+            <label>Odd PDF:</label>
+            <input type="file" id="oddFile" accept=".pdf">
+            <button class="action-btn btn-primary" onclick="mergeOddEvenPDFs()">Merge PDFs</button>
+            <button class="action-btn btn-secondary" onclick="showPage('menu')">Back to Menu</button>
+            <div id="oddEvenLoading" class="loading hidden">Processing...</div>
+        </div>
+
+        <!-- Split PDF -->
+        <div id="split" class="page-content hidden">
+            <h1>✂️ Split PDF</h1>
+            <label>Select PDF to split:</label>
+            <input type="file" id="splitFile" accept=".pdf">
+            <div class="input-group">
+                <div>
+                    <label>Start Page:</label>
+                    <input type="number" id="startPage" min="1" value="1">
+                </div>
+                <div>
+                    <label>End Page:</label>
+                    <input type="number" id="endPage" min="1" value="1">
+                </div>
+            </div>
+            <button class="action-btn btn-split" onclick="splitPDF()">Split PDF</button>
+            <button class="action-btn btn-secondary" onclick="showPage('menu')">Back to Menu</button>
+            <div id="splitLoading" class="loading hidden">Processing...</div>
+        </div>
+
+        <!-- Insert Page -->
+        <div id="insert" class="page-content hidden">
+            <h1>📥 Insert Page</h1>
+            <label>Source PDF (page to insert):</label>
+            <input type="file" id="sourceFile" accept=".pdf">
+            <label>Page number to take from source:</label>
+            <input type="number" id="sourcePageNum" min="1" value="1">
+            <label>Destination PDF (to insert into):</label>
+            <input type="file" id="destFile" accept=".pdf">
+            <label>Position to insert (page number):</label>
+            <input type="number" id="insertPosition" min="1" value="1">
+            <button class="action-btn btn-insert" onclick="insertPage()">Insert Page</button>
+            <button class="action-btn btn-secondary" onclick="showPage('menu')">Back to Menu</button>
+            <div id="insertLoading" class="loading hidden">Processing...</div>
+        </div>
+    </div>
+
+    <script>
+        const { PDFDocument } = PDFLib;
+        let multipleFiles = [];
+
+        function showPage(page) {
+            document.querySelectorAll('.page-content, #mainMenu').forEach(el => {
+                el.classList.add('hidden');
+            });
+
+            if (page === 'menu') {
+                document.getElementById('mainMenu').classList.remove('hidden');
+            } else {
+                document.getElementById(page).classList.remove('hidden');
+            }
+
+            // Reset file inputs and lists
+            if (page === 'mergeMult') {
+                multipleFiles = [];
+                updateFileList();
+            }
+        }
+
+        // Merge Multiple PDFs
+        document.getElementById('multiFiles')?.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                if (!multipleFiles.find(f => f.name === file.name)) {
+                    multipleFiles.push(file);
+                }
+            });
+            updateFileList();
+            e.target.value = ''; // Reset input
+        });
+
+        function updateFileList() {
+            const listDiv = document.getElementById('multiFileList');
+            if (multipleFiles.length === 0) {
+                listDiv.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">No files selected</div>';
+                return;
+            }
+
+            listDiv.innerHTML = multipleFiles.map((file, index) => `
+                <div class="file-item">
+                    <span class="file-item-name" title="${file.name}">${index + 1}. ${file.name}</span>
+                    <div class="file-item-controls">
+                        <button class="small-btn btn-up" onclick="moveFile(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+                        <button class="small-btn btn-down" onclick="moveFile(${index}, 1)" ${index === multipleFiles.length - 1 ? 'disabled' : ''}>↓</button>
+                        <button class="small-btn btn-remove" onclick="removeFile(${index})">✕</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function moveFile(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= multipleFiles.length) return;
+            [multipleFiles[index], multipleFiles[newIndex]] = [multipleFiles[newIndex], multipleFiles[index]];
+            updateFileList();
+        }
+
+        function removeFile(index) {
+            multipleFiles.splice(index, 1);
+            updateFileList();
+        }
+
+        async function mergeMultiplePDFs() {
+            if (multipleFiles.length < 2) {
+                alert('Please select at least 2 PDF files to merge.');
+                return;
+            }
+
+            const loading = document.getElementById('multiLoading');
+            loading.classList.remove('hidden');
+
+            try {
+                const mergedPdf = await PDFDocument.create();
+
+                for (const file of multipleFiles) {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await PDFDocument.load(arrayBuffer);
+                    const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                    copiedPages.forEach(page => mergedPdf.addPage(page));
+                }
+
+                const pdfBytes = await mergedPdf.save();
+                downloadPDF(pdfBytes, 'merged_multiple.pdf');
+                alert(`Successfully merged ${multipleFiles.length} PDFs!`);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        async function mergeOddEvenPDFs() {
+            const evenFile = document.getElementById('evenFile').files[0];
+            const oddFile = document.getElementById('oddFile').files[0];
+
+            if (!evenFile || !oddFile) {
+                alert('Please select both PDF files.');
+                return;
+            }
+
+            const loading = document.getElementById('oddEvenLoading');
+            loading.classList.remove('hidden');
+
+            try {
+                const evenArrayBuffer = await evenFile.arrayBuffer();
+                const oddArrayBuffer = await oddFile.arrayBuffer();
+
+                const evenPdf = await PDFDocument.load(evenArrayBuffer);
+                const oddPdf = await PDFDocument.load(oddArrayBuffer);
+
+                const mergedPdf = await PDFDocument.create();
+                const numPages = evenPdf.getPageCount();
+
+                for (let i = 0; i < numPages; i++) {
+                    // Add odd page
+                    if (i < oddPdf.getPageCount()) {
+                        const [oddPage] = await mergedPdf.copyPages(oddPdf, [i]);
+                        mergedPdf.addPage(oddPage);
+                    }
+
+                    // Add even page (reversed)
+                    const evenIndex = numPages - 1 - i;
+                    const [evenPage] = await mergedPdf.copyPages(evenPdf, [evenIndex]);
+                    mergedPdf.addPage(evenPage);
+                }
+
+                const pdfBytes = await mergedPdf.save();
+                downloadPDF(pdfBytes, 'merged_odd_even.pdf');
+                alert('PDFs merged successfully!');
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        async function splitPDF() {
+            const file = document.getElementById('splitFile').files[0];
+            const startPage = parseInt(document.getElementById('startPage').value);
+            const endPage = parseInt(document.getElementById('endPage').value);
+
+            if (!file) {
+                alert('Please select a PDF file.');
+                return;
+            }
+
+            if (startPage > endPage) {
+                alert('Start page must be less than or equal to end page.');
+                return;
+            }
+
+            const loading = document.getElementById('splitLoading');
+            loading.classList.remove('hidden');
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await PDFDocument.load(arrayBuffer);
+                const totalPages = pdf.getPageCount();
+
+                if (startPage < 1 || endPage > totalPages) {
+                    alert(`Invalid page range. PDF has ${totalPages} pages.`);
+                    loading.classList.add('hidden');
+                    return;
+                }
+
+                const newPdf = await PDFDocument.create();
+                const pageIndices = [];
+                for (let i = startPage - 1; i < endPage; i++) {
+                    pageIndices.push(i);
+                }
+
+                const copiedPages = await newPdf.copyPages(pdf, pageIndices);
+                copiedPages.forEach(page => newPdf.addPage(page));
+
+                const pdfBytes = await newPdf.save();
+                downloadPDF(pdfBytes, `split_pages_${startPage}-${endPage}.pdf`);
+                alert('PDF split successfully!');
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        async function insertPage() {
+            const sourceFile = document.getElementById('sourceFile').files[0];
+            const destFile = document.getElementById('destFile').files[0];
+            const sourcePageNum = parseInt(document.getElementById('sourcePageNum').value);
+            const insertPosition = parseInt(document.getElementById('insertPosition').value);
+
+            if (!sourceFile || !destFile) {
+                alert('Please select both PDF files.');
+                return;
+            }
+
+            const loading = document.getElementById('insertLoading');
+            loading.classList.remove('hidden');
+
+            try {
+                const sourceArrayBuffer = await sourceFile.arrayBuffer();
+                const destArrayBuffer = await destFile.arrayBuffer();
+
+                const sourcePdf = await PDFDocument.load(sourceArrayBuffer);
+                const destPdf = await PDFDocument.load(destArrayBuffer);
+
+                if (sourcePageNum < 1 || sourcePageNum > sourcePdf.getPageCount()) {
+                    alert(`Invalid source page. Source PDF has ${sourcePdf.getPageCount()} pages.`);
+                    loading.classList.add('hidden');
+                    return;
+                }
+
+                const newPdf = await PDFDocument.create();
+                const destPageCount = destPdf.getPageCount();
+                const insertIndex = Math.max(0, Math.min(insertPosition - 1, destPageCount));
+
+                // Copy pages before insertion point
+                if (insertIndex > 0) {
+                    const beforePages = await newPdf.copyPages(destPdf, Array.from({length: insertIndex}, (_, i) => i));
+                    beforePages.forEach(page => newPdf.addPage(page));
+                }
+
+                // Insert the page
+                const [pageToInsert] = await newPdf.copyPages(sourcePdf, [sourcePageNum - 1]);
+                newPdf.addPage(pageToInsert);
+
+                // Copy pages after insertion point
+                if (insertIndex < destPageCount) {
+                    const afterPages = await newPdf.copyPages(destPdf, Array.from({length: destPageCount - insertIndex}, (_, i) => i + insertIndex));
+                    afterPages.forEach(page => newPdf.addPage(page));
+                }
+
+                const pdfBytes = await newPdf.save();
+                downloadPDF(pdfBytes, 'inserted_page.pdf');
+                alert('Page inserted successfully!');
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function downloadPDF(pdfBytes, filename) {
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
