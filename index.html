@@ -195,6 +195,15 @@
             background: #e68900;
         }
 
+        .btn-remove-page {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-remove-page:hover {
+            background: #d32f2f;
+        }
+
         .info {
             background: #e3f2fd;
             padding: 10px;
@@ -229,6 +238,7 @@
             <button class="menu-btn" onclick="showPage('mergeOddEven')">🔀 Merge Odd-Even PDFs</button>
             <button class="menu-btn" onclick="showPage('split')">✂️ Split PDF</button>
             <button class="menu-btn" onclick="showPage('insert')">📥 Insert Page</button>
+            <button class="menu-btn" onclick="showPage('removePage')">🗑️ Remove Pages</button>
         </div>
 
         <!-- Merge Multiple PDFs -->
@@ -291,6 +301,22 @@
             <button class="action-btn btn-insert" onclick="insertPage()">Insert Page</button>
             <button class="action-btn btn-secondary" onclick="showPage('menu')">Back to Menu</button>
             <div id="insertLoading" class="loading hidden">Processing...</div>
+        </div>
+
+        <!-- Remove Pages -->
+        <div id="removePage" class="page-content hidden">
+            <h1>🗑️ Remove Pages</h1>
+            <label>Select PDF:</label>
+            <input type="file" id="removeFile" accept=".pdf">
+            <div class="info">
+                Enter page numbers to remove (e.g., "1, 3, 5-7" removes pages 1, 3, 5, 6, and 7).
+            </div>
+            <label>Pages to remove:</label>
+            <input type="text" id="pagesToRemove" placeholder="e.g., 1, 3, 5-7" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;">
+            <div id="removePageInfo" class="info hidden"></div>
+            <button class="action-btn btn-remove-page" onclick="removePages()">Remove Pages</button>
+            <button class="action-btn btn-secondary" onclick="showPage('menu')">Back to Menu</button>
+            <div id="removeLoading" class="loading hidden">Processing...</div>
         </div>
     </div>
 
@@ -548,6 +574,118 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+        }
+
+        // Remove Pages functionality
+        document.getElementById('removeFile')?.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            const infoDiv = document.getElementById('removePageInfo');
+            if (file) {
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await PDFDocument.load(arrayBuffer);
+                    const totalPages = pdf.getPageCount();
+                    infoDiv.textContent = `PDF has ${totalPages} page(s).`;
+                    infoDiv.classList.remove('hidden');
+                } catch (error) {
+                    infoDiv.textContent = 'Error reading PDF: ' + error.message;
+                    infoDiv.classList.remove('hidden');
+                }
+            } else {
+                infoDiv.classList.add('hidden');
+            }
+        });
+
+        function parsePageRanges(input, totalPages) {
+            const pages = new Set();
+            const parts = input.split(',').map(p => p.trim()).filter(p => p);
+            
+            for (const part of parts) {
+                if (part.includes('-')) {
+                    const [start, end] = part.split('-').map(n => parseInt(n.trim()));
+                    if (isNaN(start) || isNaN(end)) {
+                        throw new Error(`Invalid range: ${part}`);
+                    }
+                    if (start > end) {
+                        throw new Error(`Invalid range: ${part} (start > end)`);
+                    }
+                    for (let i = start; i <= end; i++) {
+                        if (i >= 1 && i <= totalPages) {
+                            pages.add(i);
+                        }
+                    }
+                } else {
+                    const page = parseInt(part);
+                    if (isNaN(page)) {
+                        throw new Error(`Invalid page number: ${part}`);
+                    }
+                    if (page >= 1 && page <= totalPages) {
+                        pages.add(page);
+                    }
+                }
+            }
+            return Array.from(pages).sort((a, b) => a - b);
+        }
+
+        async function removePages() {
+            const file = document.getElementById('removeFile').files[0];
+            const pagesToRemoveInput = document.getElementById('pagesToRemove').value.trim();
+
+            if (!file) {
+                alert('Please select a PDF file.');
+                return;
+            }
+
+            if (!pagesToRemoveInput) {
+                alert('Please enter page numbers to remove.');
+                return;
+            }
+
+            const loading = document.getElementById('removeLoading');
+            loading.classList.remove('hidden');
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await PDFDocument.load(arrayBuffer);
+                const totalPages = pdf.getPageCount();
+
+                const pagesToRemove = parsePageRanges(pagesToRemoveInput, totalPages);
+
+                if (pagesToRemove.length === 0) {
+                    alert('No valid pages to remove.');
+                    loading.classList.add('hidden');
+                    return;
+                }
+
+                if (pagesToRemove.length >= totalPages) {
+                    alert('Cannot remove all pages from the PDF.');
+                    loading.classList.add('hidden');
+                    return;
+                }
+
+                // Create set for quick lookup
+                const removeSet = new Set(pagesToRemove);
+
+                // Get indices of pages to keep (0-based)
+                const pagesToKeep = [];
+                for (let i = 1; i <= totalPages; i++) {
+                    if (!removeSet.has(i)) {
+                        pagesToKeep.push(i - 1); // Convert to 0-based index
+                    }
+                }
+
+                const newPdf = await PDFDocument.create();
+                const copiedPages = await newPdf.copyPages(pdf, pagesToKeep);
+                copiedPages.forEach(page => newPdf.addPage(page));
+
+                const pdfBytes = await newPdf.save();
+                downloadPDF(pdfBytes, 'pages_removed.pdf');
+                alert(`Successfully removed ${pagesToRemove.length} page(s)! New PDF has ${pagesToKeep.length} page(s).`);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                loading.classList.add('hidden');
+            }
         }
     </script>
 </body>
